@@ -16,10 +16,10 @@ try {
      //   id: "gd001",
      //   type: "Kitchen"
         id: "nebula-tom-id",
-        type: "FRIDGE"
+        type: "nebula"
     };
     
-    return messenger.sendCommand(device, {commandId: "open"});
+    return messenger.sendCommand(device, {commandId: "open", params: {"applianceType": "FRIDGE"}});
 }catch(exception){
     return exception;
 }

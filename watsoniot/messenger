@@ -36,7 +36,10 @@ Messenger.prototype.sendCommand = function(device, msg) {
     };
     
     if (msg.params) {
-        msgBody.params = msg.params;
+        
+        for (var key in msg.params) {
+            msgBody[key] = msg.params[key];
+        }        
     }
     
     var reqParams = {
