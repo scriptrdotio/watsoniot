@@ -1,0 +1,83 @@
+var log = require("log"); log.setLevel("info");
+var configModule = require("./config"); 
+var messengerModule = require("./messenger");
+
+/**
+ * Simple wrapping of Device-related API operations
+ * @class Device
+ * @constructor
+ * @param {Object} [dto]
+ * @param {Object} [dto.data]: device specific data. Should at least contain deviceId
+ * @param {Object} [dto.client]: instance of the HttpClient class
+ * @param {Object} [dto.config]: optional, config object to use, default to the values contained in ./config
+ */
+function Device(dto) {
+    
+    if (!dto || !dto.data || !dto.client || !dto.data.deviceId) {
+
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "/Device: data, data.deviceId and client cannot be null or empty"
+        };
+    }
+    
+    for (var key in dto.data){
+        this[key] = dto.data[key];
+    }
+    
+    this.client = dto.client; 
+    this.config = dto.config ? dto.config : 
+    	{username: configModule.apiKey, token: configModule.appToken, url: configModule.url_, maxWait: configModule.maxWait};
+}
+
+/**
+ * @method listLastEvents
+ * @param {Object} [dto]: optional
+ * @return {Array}
+ * @throw {Error}
+ */
+Device.prototype.listLastEvents = function(dto) {
+    
+     var reqParams = {
+        
+        url: this.config.url_ + "/device/types/" + this.typeId + "/devices/" + encodeURIComponent(this.deviceId) + "/events",
+        method: "GET"
+    };
+    
+    var resp = this.client.callApi(reqParams);
+    for (var i = 0; i < resp.length; i++) {
+        
+        try {
+            resp[i].payload = atob(resp[i].payload);
+        }catch(exception) {            
+            log.error("/Device.listLastEvent: exception occured while base64 decoding payload.\n" + JSON.stringify(exception));            
+        }
+    }
+    
+    return resp;
+};
+
+/**
+ * Send a command to a device on behalf of an application
+ * @method sendCommand
+ * @param {Object} [device]
+ * @param {String} [device.url]: the url prefix to use by applications to send commands on bluemix
+ * @param {Object} [msg]
+ * @param {Number} [msg.maxWait]: wait time of the execution of a command
+ * @param {String} [msg.params]: arguments passed to the command (optional)
+ * @param {String} [msg.commandId]: the command to execute
+ */
+Device.prototype.sendCommand = function(msg) {
+    
+    if (!msg) {
+        
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "/Device.sendCommand msg cannot be null or empty"
+        };
+    }
+    
+    return this.messenger.sendCommand({id: this.deviceId, type: this.deviceType}, msg);
+};
