@@ -1,0 +1,103 @@
+var log = require("log"); log.setLevel("info");
+var http = require("http");
+var config = require("./config");
+
+/**
+ * Simple HTTP client to invoke the Bluemix/Watson API
+ * @class HttpClient
+ * @constructor
+ * @param {Object} [dto]
+ * @param {String} [dto.username]
+ * @param {String} [dto.password]
+ */
+function HttpClient(dto) {
+
+    if (!dto || !dto.username || !dto.password) {
+
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "dto.username and dto.password cannot be null or empty"
+        };
+    }
+
+    this.username = dto.username;
+    this.password = dto.password;
+}
+
+/**
+ * Invoke a given API. 
+ * This method can throw exceptions
+ * @method callApi
+ * @param {Object} [params] : the parameters of the http call to issue
+ * @param {String} [params.url] : the url of the targeted API
+ * @param {String} [params.method] : (optional) the http method to use when invoking the API
+ * @param {Object} [params.headers]: (optional) the http headers to send to the API
+ * @param {Object} [params.params]: (optional) the parameters that are expected by the API
+ */
+HttpClient.prototype.callApi = function(params) {
+
+    var paramsClone = JSON.parse(JSON.stringify(params))
+    try {   
+        return this._callApi(paramsClone);
+    }catch(exception) {
+      
+        log.error("Caught exception " + JSON.stringify(exception));
+        this._handleError(exception);    
+    }
+};
+
+HttpClient.prototype._callApi = function(params) {
+
+    params.params = params.params ? params.params : {};
+    params.headers = params.headers ? params.headers : {};
+    params.headers["Authorization"] = "Basic " + btoa(this.username + ":" + this.password);
+
+    if (params.params && (params.method == "POST" || params.method == "PUT")) {
+
+        
+        if (params.headers) {
+            
+            if(params.headers["Content-Type"] == "application/json") {
+              params.bodyString = JSON.stringify(params.params);
+            }
+            
+            delete params.params;            
+        }
+    }
+
+    log.info("Sending following request: " + JSON.stringify(params));
+    var resp = http.request(params);
+    log.info("Received following response: " + JSON.stringify(resp));
+
+    if (resp.status >= "200" && resp.status < "300") {
+        
+        if (!resp.body) {
+            return {};
+        }
+        
+        return JSON.parse(resp.body);
+    }else {
+        throw resp;
+    }
+};
+
+HttpClient.prototype._handleError = function(resp) {
+
+    var errorObj = {};
+    errorObj.status = resp.status;
+    if (resp.body) {
+
+        try {            
+            errorObj.detail = JSON.parse(resp.body);
+        }catch(e) {
+            errorObj.detail = resp.body;
+        }
+    };
+
+
+    throw {
+        "errorCode": "Invocation_Error",
+        "errorDetail": errorObj
+    };
+};
