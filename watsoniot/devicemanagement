@@ -1,0 +1,136 @@
+var log = require("log"); log.setLevel("info");
+var configModule = require("./config"); 
+var clientModule = require("./client");
+var deviceModule = require("./device");
+
+/**
+ * @class DeviceManagement
+ * @constructor
+ * @param {Object} [config] optional. Can use /config if not provided
+ * @param {String} [config.username]: the app's API Key (obtained from Watson IoT service)      
+ * @param {String} [config.token]: the app's auth token  (obtained from Watson IoT service) 
+ * @param {String} [config.ur]: the URL prefix to use to communicate with bluemix
+ */
+function DeviceManager(config) {
+    
+    this.config = config ? config : {username: configModule.apiKey, token: configModule.appToken, url: configModule.url_, maxWait: configModule.maxWait};
+    this.client = new clientModule.HttpClient({username: this.config.username, password: this.config.token});
+}
+
+/**
+ * @method listDeviceTypes
+ * @return {Object} : {types, meta}
+ * @throws {Error}
+ */
+DeviceManager.prototype.listDeviceTypes = function() {
+    
+    var reqParams = {
+        
+        url: this.config.url_ + "/device/types",
+        method: "GET"
+    };
+    
+    var resp = this.client.callApi(reqParams);
+    return {
+        
+        types: resp.results,
+        meta: resp.meta
+    };
+};
+
+/**
+ * @method listDevicesOfType
+ * @param {String} type: the device type
+ * @return {Array} of Device instances
+ * @throws {Error}
+ */
+DeviceManager.prototype.listDevicesOfType = function(type) {
+    
+    if (!type) {
+
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "/DeviceManager.listDevicesOfType: type cannot be null or empty"
+        };
+    }
+    
+    var reqParams = {
+        
+        url: this.config.url_ + "/device/types/" + type + "/devices",
+        method: "GET"
+    };
+    
+    var resp = this.client.callApi(reqParams).results;
+    var deviceList = [];
+    for (var i = 0; i < resp.length; i++) {
+        
+        var device = new deviceModule.Device({data: resp[i], client: this.client, config: this.config});
+        deviceList.push(device);
+    }
+    
+    return deviceList;
+};
+
+/**
+ * @method getDeviceOfType
+ * @param {Object} [dto]
+ * @param {String} [dto.type]: the device type
+ * @param {String} [dto.id]: the device id
+ * @return {Object} instance of Device
+ * @throws {Error}
+ */
+DeviceManager.prototype.getDeviceOfType = function(dto) {
+    
+    if (!dto || !dto.type || !dto.id) {
+
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "/DeviceManager.getDeviceOfType: dto.type and dto.id cannot be null or empty"
+        };
+    }
+    
+    var reqParams = {
+        
+        url: this.config.url_ + "/device/types/" + dto.type + "/devices/" + dto.id,
+        method: "GET"
+    };
+    
+    var resp = this.client.callApi(reqParams);
+    return new deviceModule.Device({data: resp, client: this.client, config: this.config});
+};
+
+/**
+ * @method listLogicalInterfacesForDeviceType
+ * @param {String} type: device type
+ * @return {Array}
+ * @throws {Error}
+ */
+DeviceManager.prototype.listLogicalInterfacesForDeviceType = function(type) {
+  
+    var reqParams = {
+        
+        url: this.config.url_ + "/device/types/" + type + "/logicalinterfaces",
+        method: "GET"
+    };
+    
+    return this.client.callApi(reqParams).results;
+};
+
+/**
+ * @method listPhyisicalInterfacesForDeviceType
+ * @param {String} type: device type
+ * @return {Array}
+ * @throws {Error}
+ */
+DeviceManager.prototype.listPhyisicalInterfacesForDeviceType = function(type) {
+  
+    var reqParams = {
+        
+        url: this.config.url_ + "/device/types/" + type + "/physicalinterfaces",
+        method: "GET"
+    };
+    
+    return this.client.callApi(reqParams).results;
+};
