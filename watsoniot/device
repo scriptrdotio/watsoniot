@@ -80,5 +80,5 @@ Device.prototype.sendCommand = function(msg) {
         };
     }
     
-    return this.messenger.sendCommand({id: this.deviceId, type: this.deviceType}, msg);
+    return this.messenger.sendCommand({id: this.deviceId, type: this.typeId}, msg);
 };
