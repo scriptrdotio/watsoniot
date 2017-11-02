@@ -29,6 +29,7 @@ function Device(dto) {
     this.client = dto.client; 
     this.config = dto.config ? dto.config : 
     	{username: configModule.apiKey, token: configModule.appToken, url: configModule.url_, maxWait: configModule.maxWait};
+    this.messenger = new messengerModule.Messenger(this.config);
 }
 
 /**
