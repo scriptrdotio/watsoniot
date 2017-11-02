@@ -1,27 +1,31 @@
-
-var http = require("http");
 var log = require("log"); log.setLevel("info");
 var configModule = require("./config"); 
+var clientModule = require("./client");
 
 /**
  * @class Messenger
  * @constructor
- * @param {Object} [config] optiona. Can use /config if not provided
+ * @param {Object} [config] optional. Can use /config if not provided
  * @param {String} [config.username]: the app's API Key (obtained from Watson IoT service)      
  * @param {String} [config.token]: the app's auth token  (obtained from Watson IoT service) 
  * @param {String} [config.ur]: the URL prefix to use to send a command to the device (e.g. 
  * https://orgId.messaging.internetofthings.ibmcloud.com:8883/api/v0002/
  * @param {Number} [config.maxWait] 
+ * @param {Object} client: optional. istance of HttpClient
  */
-function Messenger(config) {
+function Messenger(config, client) {
+    
     this.config = config ? config : {username: configModule.apiKey, token: configModule.appToken, url: configModule.url, maxWait: configModule.maxWait};
+    this.client = client ? client : new clientModule.HttpClient({username: this.config.username, password: this.config.token});
 }
 
 /**
  * Send a command to a device on behalf of an application
+ * Expected request url: https://orgId.messaging.internetofthings.ibmcloud.com:8883/api/v0002/application/types/typeId/devices/deviceId/commands/commandId
  * @method sendCommand
  * @param {Object} [device]
- * @param {String} [device.url]: the url prefix to use by applications to send commands on bluemix
+ * @param {String} [device.type]: the device type
+ * @param {String} [device.id]: the device id
  * @param {Object} [msg]
  * @param {Number} [msg.maxWait]:  wait time of the execution of a command
  * @param {String} [msg.params]:  arguments passed to the command (optional)
@@ -29,8 +33,23 @@ function Messenger(config) {
  */
 Messenger.prototype.sendCommand = function(device, msg) {
    
-    // https://orgId.messaging.internetofthings.ibmcloud.com:8883/api/v0002/application/types/typeId/devices/deviceId/commands/commandId
-    var url = this.config.url + "application/types/" + device.type + "/devices/" + device.id + "/commands/" + msg.commandId;
+    if (!device || !device.id || !device.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.sendCommand: device.id and device.type cannot be null or empty"
+        };
+    }
+    
+    if (!msg || !msg.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.sendCommand: msg.type cannot be null or empty"
+        };
+    }
+    
+    var url = this.config.url + "application/types/" + device.type + "/devices/" + device.id + "/commands/" + msg.type;
     var msgBody = {
         "waitTimeSecs": msg.maxWait ? msg.maxWait : this.config.maxWait
     };
@@ -46,15 +65,11 @@ Messenger.prototype.sendCommand = function(device, msg) {
         
         url: url,
         method: "POST",
-        headers: {
-            "Authorization":  "Basic " + btoa(this.config.username + ":" + this.config.token),
+        headers: {          
             "Content-Type": "application/json"
         },
-        bodyString: JSON.stringify(msgBody) 
+        params: msgBody 
     };
     
-    log.info("Request " + JSON.stringify(reqParams));
-    var resp = http.request(reqParams);
-    log.info("Response " + JSON.stringify(resp));
-    return resp;
+    return this.client.callApi(reqParams);
 };
