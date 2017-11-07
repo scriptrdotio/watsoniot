@@ -139,7 +139,7 @@ Messenger.prototype.publishCommand = function(device, dto) {
     var endpoint = PROTOCOL + "://" + this.config.orgId + "." + this.config.messaging;
    
     // create a client id if not specified
-    var clientId = dto.clientId ? dto.clientId : "a:" + this.config.orgId + ":scriptr";
+    var clientId = dto.clientId ? dto.clientId : "a:" + this.config.orgId + (":scriptr_" + Math.round(Math.random(1000) + 1));
   
     var msg = "";
     if (dto.msg.params) {
