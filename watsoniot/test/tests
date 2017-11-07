@@ -6,12 +6,16 @@ try {
     // Use application credentials, i.e. API key and API token
     // In this example, we retrieve the credentials from the config file
     var config = {
-
+        
         url: config.url,
         url_: config.url_,
-        username: config.apiKey,
+    	username: config.apiKey,
         token: config.appToken,
-        maxWait: config.maxWait
+        //username: config.username,
+        //token: config.token,
+        maxWait: config.maxWait,
+        orgId: config.orgId,
+        messaging: config.messaging
     };
 
     // Manipulate devices using the DeviceManager class. 
@@ -25,6 +29,15 @@ try {
     // type is the mandatory command type and params is an object that contains optional parameters to send 
     // along with the command
     var commandOutput = device.sendCommand({type: "Control", params: {"door":"lock"}}); // output should be empty
+
+    // Publish a command to the on behalf of the application using MQTT
+    // In the dto, you can also specify the optinal format, the username and password (API Key + API token) and the clientId
+    // if not specified, the connector falls back to the default values
+    var dto = {
+        msg: msg
+    };
+    
+    return device.publishCommand(dto);
 
     // List the last events sent by the device
     var eventList = device.listLastEvents();
