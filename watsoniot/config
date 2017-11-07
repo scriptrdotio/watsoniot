@@ -1,20 +1,22 @@
-//var orgId = "o6i047";
-var orgId = "mytozr"
+// The orgId used by the bluemix application
+var orgId = "mytozr"; // sample
 
-//https://orgId.messaging.internetofthings.ibmcloud.com:8883/api/v0002/"
-var url = "https://"+  orgId + ".messaging.internetofthings.ibmcloud.com:8883/api/v0002/";
+// The messaging part of a Watson IoT messaging endpoint
+var messaging = "messaging.internetofthings.ibmcloud.com";
 
- // Garage door API key
-//var apiKey = "a-o6i047-a01sx3iarj";
-//var appToken = "I15ZmND+qEkW?7tAc+"; 
+// The URL to send commands or events to devices, e.g. https://orgId.messaging.internetofthings.ibmcloud.com:8883/api/v0002/"
+var url = "https://"+  orgId + "." + messaging + ":8883/api/v0002/";
 
-// Smart Kitchen API key
-var apiKey = "a-mytozr-b8up2bdwgd";
-var appToken = "mcynBilyKChWdl4*yR";
-    
-//gd001 device
-var token = "ibQZFVCSx)r@R_VhN6"; 
-var username = "use-token-auth";
+// URL prefix of the regular (not messaging) REST API 
+var url_ = "https://" + orgId + ".internetofthings.ibmcloud.com/api/v0002";
+
+// When sending commands/events on behalf of the application, use the below 
+var apiKey = "a-o6i047-a01sx3iarj"; // sample
+var appToken = "I15ZmND+qEkW?7tAc+"; // sample 
+  
+// When sending commands/events on behalf of the device, use the below 
+var token = "ibQZFVCSx)r@R_VhN6"; // sample
+var username = "use-token-auth"; // sample
 
 // Max wait time for a command to execute on a device
 const MAX_WAIT = 2000;
