@@ -74,7 +74,7 @@ Device.prototype.listLastEvents = function(dto) {
  * @param {Object} [dto.msg]
  * @param {String} [dto.msg.params]: arguments passed to the command (optional)
  * @param {String} [dto.msg.commandId]: the type of command to execute
- * @param {String} [dto.format]: the format of the message (could  be json, text, bin or string). Optiona, defaults to string
+ * @param {String} [dto.format]: the format of the message (could  be json, text, xml, bin or string). Optiona, defaults to string
  * @param {String} [dto.username]: optional, "use-token-auth" if publishing on behalf of the device, or API Key if on behalf of application
  * @param {String} [dto.password]: optional, device token if publishing on behalf of the device, or API token if on behalf of application
  * @param {String} [dto.clientId]: optional, d:$org:$type:$id if publishing on behalf of the device, a:$org:$appId if on behalf of application
