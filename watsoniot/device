@@ -27,8 +27,16 @@ function Device(dto) {
     }
     
     this.client = dto.client; 
-    this.config = dto.config ? dto.config : 
-    	{username: configModule.apiKey, token: configModule.appToken, url: configModule.url_, maxWait: configModule.maxWait};
+    this.config = dto.config ? dto.config : {
+        
+        username: configModule.apiKey, 
+        token: configModule.appToken, 
+        url: configModule.url_, 
+        maxWait: configModule.maxWait, 
+        orgId: configModule.orgId, 
+        messaging: configModule.messaging
+    };
+     
     this.messenger = new messengerModule.Messenger(this.config);
 }
 
@@ -60,10 +68,36 @@ Device.prototype.listLastEvents = function(dto) {
 };
 
 /**
+ * Publish a command over MQTT
+ * @method publishCommand
+ * @param {Object} [dto]
+ * @param {Object} [dto.msg]
+ * @param {String} [dto.msg.params]: arguments passed to the command (optional)
+ * @param {String} [dto.msg.commandId]: the type of command to execute
+ * @param {String} [dto.format]: the format of the message (could  be json, text, bin or string). Optiona, defaults to string
+ * @param {String} [dto.username]: optional, "use-token-auth" if publishing on behalf of the device, or API Key if on behalf of application
+ * @param {String} [dto.password]: optional, device token if publishing on behalf of the device, or API token if on behalf of application
+ * @param {String} [dto.clientId]: optional, d:$org:$type:$id if publishing on behalf of the device, a:$org:$appId if on behalf of application
+ * @return
+ * @throws {Error}
+ */
+Device.prototype.publishCommand = function(dto) {
+
+    if (!dto || !dto.msg) {
+        
+        throw {
+
+            errorCode: "Missing_Parameter",
+            errorDetail: "/Device.publishCommand msg cannot be null or empty"
+        };
+    }
+    
+    return this.messenger.publishCommand({id: this.deviceId, type: this.typeId}, dto);
+};
+
+/**
  * Send a command to a device on behalf of an application
  * @method sendCommand
- * @param {Object} [device]
- * @param {String} [device.url]: the url prefix to use by applications to send commands on bluemix
  * @param {Object} [msg]
  * @param {Number} [msg.maxWait]: wait time of the execution of a command
  * @param {String} [msg.params]: arguments passed to the command (optional)
