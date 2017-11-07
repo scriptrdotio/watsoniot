@@ -1,6 +1,12 @@
 var log = require("log"); log.setLevel("info");
+var mqtt = require("mqtt");
 var configModule = require("./config"); 
 var clientModule = require("./client");
+
+
+const DEFAULT_PUBLISH_FORMAT = "string";
+const PROTOCOL = "tcp";
+const topicTemplate = "iot-2/type/$deviceType/id/$deviceId/cmd/$commandType/fmt/$format";
 
 /**
  * @class Messenger
@@ -14,8 +20,17 @@ var clientModule = require("./client");
  * @param {Object} client: optional. istance of HttpClient
  */
 function Messenger(config, client) {
+   
+    this.config = config ? config : {
     
-    this.config = config ? config : {username: configModule.apiKey, token: configModule.appToken, url: configModule.url, maxWait: configModule.maxWait};
+        username: configModule.apiKey, 
+        token: configModule.appToken, 
+        url: configModule.url, 
+        maxWait: configModule.maxWait,
+        orgId: configModule.orgId,
+        messaging: configModule.messaging
+    };
+    
     this.client = client ? client : new clientModule.HttpClient({username: this.config.username, password: this.config.token});
 }
 
@@ -66,9 +81,124 @@ Messenger.prototype.sendCommand = function(device, msg) {
         url: url,
         method: "POST",
         headers: {          
+           "Content-Type": "application/json"           
+        },
+        params: msgBody
+    };
+    
+    return this.client.callApi(reqParams);
+};
+
+/**
+ * Publish a command over MQTT
+ * @method publishCommand
+ * @param {Object} [device]
+ * @param {String} [device.id]
+ * @param {String} [device.type]
+ 
+ * @param {Object} [dto]
+ * @param {Object} [dto.msg]
+ * @param {String} [dto.msg.params]: arguments passed to the command (optional)
+ * @param {String} [dto.msg.commandId]: the type of command to execute
+ * @param {String} [dto.format]: the format of the message (could  be json, text, bin or string). Optiona, defaults to string
+ * @param {String} [dto.username]: optional, "use-token-auth" if publishing on behalf of the device, or API Key if on behalf of application
+ * @param {String} [dto.password]: optional, device token if publishing on behalf of the device, or API token if on behalf of application
+ * @param {String} [dto.clientId]: optional, d:$org:$type:$id if publishing on behalf of the device, a:$org:$appId if on behalf of application
+ * @return
+ * @throws {Error}
+ */
+Messenger.prototype.publishCommand = function(device, dto) {
+    
+    if (!device || !device.id || !device.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.publishCommand: device.id and device.type cannot be null or empty"
+        };
+    }
+    
+    if (!dto.msg || !dto.msg.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.publishCommand: dto.msg and dto.msg.commandId cannot be null or empty"
+        };
+    }
+    
+    // format of the message to publish, defines the suffix of the topic name
+    var format = dto.format ? dto.format : DEFAULT_PUBLISH_FORMAT; 
+   
+    // build the topic name 
+    var topic = topicTemplate;
+    topic = topic.replace(/\$deviceType/g, device.type);
+	topic = topic.replace(/\$deviceId/g, device.id);
+	topic = topic.replace(/\$commandType/g, dto.msg.type);
+    topic = topic.replace(/\$format/g, format);
+   
+    // build the endpoint url
+    var endpoint = PROTOCOL + "://" + this.config.orgId + "." + this.config.messaging;
+   
+    // create a client id if not specified
+    var clientId = dto.clientId ? dto.clientId : "a:" + this.config.orgId + ":scriptr";
+  
+    var msg = "";
+    if (dto.msg.params) {
+       msg = typeof(dto.msg.params) == "object" ? JSON.stringify(dto.msg.params) : dto.msg.params; 
+    }
+
+    var username = dto.username ? dto.username : this.config.username;
+    var password = dto.password ? dto.password : this.config.token;
+	var resp = mqtt.publish(endpoint, topic, msg, {"username": username, "password": password, "clientId": clientId});
+    if (resp.metadata.status == "failure") {
+        
+         log.info("/device.publishMessage: failed to publish message\n  " + JSON.stringify(resp));
+        throw resp;
+    }
+    
+    return resp.result;
+};
+
+/**
+ *
+ */
+Messenger.prototype.sendEvent = function(device, msg) {
+    
+    if (!device || !device.id || !device.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.sendCommand: device.id and device.type cannot be null or empty"
+        };
+    }
+    
+    if (!event || !event.type) {
+        
+        throw {
+            erroCode: "Missing_Parameter",
+            errorDetail: "/watsoniot/messenger.sendCommand: event.type cannot be null or empty"
+        };
+    }
+    
+    var url =  this.config.url + "application/types/" + device.type + "/devices/" + device.id + "/events/" + event.type;
+    var msgBody = {
+        "waitTimeSecs": event.maxWait ? event.maxWait : this.config.maxWait
+    };
+    
+    if (msg.params) {
+        
+        for (var key in msg.params) {
+            msgBody[key] = msg.params[key];
+        }        
+    }
+    
+    var reqParams = {
+        
+        url: url,
+        method: "POST",
+        headers: {          
             "Content-Type": "application/json"
         },
-        params: msgBody 
+        params: {"d": msgBody}
     };
     
     return this.client.callApi(reqParams);
